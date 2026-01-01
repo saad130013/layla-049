@@ -6,7 +6,7 @@ import { useI18n } from '../hooks/useI18n';
 import Card from '../components/ui/Card';
 import { CDR, CDRStatus, CDRIncidentType, CDRManagerDecision, UserRole, PenaltyInvoice, PenaltyStatus } from '../types';
 import { SERVICE_TYPES, MANPOWER_DISCREPANCY_OPTIONS, MATERIAL_DISCREPANCY_OPTIONS, EQUIPMENT_DISCREPANCY_OPTIONS, ON_SPOT_ACTION_OPTIONS, ACTION_PLAN_OPTIONS, PENALTY_RATES } from '../constants';
-import { Save, Send, ShieldCheck, Printer, Upload, CheckCircle, Hospital, X } from 'lucide-react';
+import { Save, Send, ShieldCheck, Printer, Upload, CheckCircle, Hospital, X, ArrowLeft } from 'lucide-react';
 
 const Section: React.FC<{title: string, children: React.ReactNode, className?: string}> = ({title, children, className}) => {
     const { t } = useI18n();
@@ -96,10 +96,7 @@ const CDRDetail: React.FC = () => {
                     reader.readAsDataURL(file);
                 }
             }
-             // Reset file input
-            if(event.target) {
-                event.target.value = '';
-            }
+            if(event.target) event.target.value = '';
         }
     };
 
@@ -114,7 +111,7 @@ const CDRDetail: React.FC = () => {
         if (!cdr || !user) return;
         const finalCDR: CDR = {
             ...cdr,
-            employeeSignature: user.name, // Simple signature
+            employeeSignature: user.name,
             status,
             id: isNew ? `cdr-${Date.now()}` : cdr.id,
             referenceNumber: isNew && status === CDRStatus.Submitted ? `CDR-${Date.now().toString().slice(-4)}` : cdr.referenceNumber,
@@ -130,8 +127,6 @@ const CDRDetail: React.FC = () => {
     
     const handleManagerApproval = () => {
         if (!cdr || !user) return;
-        
-        // Validation: Ensure Manager Decision is selected
         if (!cdr.managerDecision) {
             alert(t('pleaseSelectManagerDecision'));
             return;
@@ -144,11 +139,8 @@ const CDRDetail: React.FC = () => {
             status: CDRStatus.Approved,
         };
         
-        // --- Invoice Generation Logic ---
-        // STRICT CHECK: Only generate invoice if decision is exactly 'Penalty'
         if (finalCDR.managerDecision === CDRManagerDecision.Penalty) {
             const invoiceItems: any[] = [];
-            
             finalCDR.manpowerDiscrepancy.forEach(d => {
                 invoiceItems.push({ description: d, category: 'Manpower Discrepancy', amount: PENALTY_RATES[d] || PENALTY_RATES['Other'] });
             });
@@ -178,17 +170,13 @@ const CDRDetail: React.FC = () => {
                 };
                 addPenaltyInvoice(newInvoice);
                 alert(`Report Approved. Penalty Invoice generated for ${totalAmount} SAR.`);
-            } else {
-                 alert("Report Approved as Penalty, but no monetary items were selected.");
             }
         } else {
-            // Case: Warning, Attention, No Valid Case
-            alert(`Report Approved with decision: ${t(finalCDR.managerDecision || '')}. No financial penalty issued.`);
+            alert(`Report Approved with decision: ${t(finalCDR.managerDecision || '')}.`);
         }
-        // --------------------------------
 
         updateCDR(finalCDR);
-        setCdr(finalCDR); // update local state
+        setCdr(finalCDR);
     };
     
     const renderCheckboxes = (title: string, options: string[], category: keyof CDR, isEditable: boolean) => (
@@ -212,19 +200,28 @@ const CDRDetail: React.FC = () => {
     
     if (!cdr) return <div>Loading CDR...</div>;
     
-    const isEmployeeEditable = cdr.status === CDRStatus.Draft && user?.id === cdr.employeeId;
-    const isManagerEditable = cdr.status === CDRStatus.Submitted && user?.role === UserRole.Supervisor;
+    // صلاحيات الأدوار
+    const isInspector = user?.role === UserRole.Inspector;
+    const isSupervisor = user?.role === UserRole.Supervisor;
+    const isContractor = user?.role === UserRole.Contractor;
+
+    const isEmployeeEditable = isInspector && cdr.status === CDRStatus.Draft && user?.id === cdr.employeeId;
+    const isManagerEditable = isSupervisor && cdr.status === CDRStatus.Submitted;
     const isEditableOnScreen = isEmployeeEditable || isManagerEditable;
-    const showPrintButton = !isNew && (user?.id === cdr.employeeId || user?.role === UserRole.Supervisor);
 
     return (
         <div className="space-y-6">
             <Card>
                 <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-brand-blue-dark dark:text-brand-green">
-                        {isNew ? t('newCDR') : `${t('cdr')} - ${cdr.referenceNumber}`}
-                    </h2>
-                     {showPrintButton && (
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full no-print">
+                            <ArrowLeft size={20} />
+                        </button>
+                        <h2 className="text-2xl font-bold text-brand-blue-dark dark:text-brand-green">
+                            {isNew ? t('newCDR') : `${t('cdr')} - ${cdr.referenceNumber}`}
+                        </h2>
+                    </div>
+                     {!isNew && (
                         <button onClick={() => window.print()} className="flex items-center px-4 py-2 bg-brand-blue text-white rounded-md hover:bg-brand-blue-dark no-print">
                             <Printer size={16} className="me-2"/> {t('printReport')}
                         </button>
@@ -232,192 +229,161 @@ const CDRDetail: React.FC = () => {
                 </div>
             </Card>
             
-            <div className="no-print">
-                {isEditableOnScreen ? (
-                    <>
-                    <Section title="basicIncidentInformation">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <InputField label="dateOfIncident" name="date" type="date" value={cdr.date} onChange={handleInputChange} disabled={!isEmployeeEditable} />
-                            <InputField label="timeOfIncident" name="time" type="time" value={cdr.time} onChange={handleInputChange} disabled={!isEmployeeEditable} />
-                            <SelectField label="wardLocation" name="locationId" value={cdr.locationId} onChange={handleInputChange} disabled={!isEmployeeEditable} options={locations.map(l => ({ value: l.id, label: l.name[language] }))} />
-                            <SelectField label="typeOfIncident" name="incidentType" value={cdr.incidentType} onChange={handleInputChange} disabled={!isEmployeeEditable} options={Object.values(CDRIncidentType).map(v => ({ value: v, label: t(v) }))} />
-                        </div>
-                    </Section>
-                    <Section title="inCharge">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <InputField label="name" name="inChargeName" value={cdr.inChargeName} onChange={handleInputChange} disabled={!isEmployeeEditable} />
-                            <InputField label="idNo" name="inChargeId" value={cdr.inChargeId} onChange={handleInputChange} disabled={!isEmployeeEditable} />
-                            <InputField label="email" name="inChargeEmail" type="email" value={cdr.inChargeEmail} onChange={handleInputChange} disabled={!isEmployeeEditable} />
-                        </div>
-                    </Section>
+            {/* إخطار بقرار المدير - هام جداً للمقاول */}
+            {cdr.status === CDRStatus.Approved && (
+                <div className={`p-6 rounded-lg border-l-8 shadow-md flex items-center justify-between no-print ${
+                    cdr.managerDecision === CDRManagerDecision.Penalty ? 'bg-red-50 border-red-500' : 'bg-blue-50 border-blue-500'
+                }`}>
+                    <div>
+                        <p className="text-sm font-bold uppercase opacity-60">{t('managerDecision')}</p>
+                        <h3 className={`text-2xl font-black ${cdr.managerDecision === CDRManagerDecision.Penalty ? 'text-red-700' : 'text-blue-700'}`}>
+                            {t(cdr.managerDecision || '')}
+                        </h3>
+                        {cdr.managerComment && <p className="mt-2 italic text-gray-700">"{cdr.managerComment}"</p>}
+                    </div>
+                    <CheckCircle size={48} className={cdr.managerDecision === CDRManagerDecision.Penalty ? 'text-red-300' : 'text-blue-300'} />
+                </div>
+            )}
 
-                    {renderCheckboxes("serviceType", SERVICE_TYPES, 'serviceTypes', isEmployeeEditable)}
-                    {renderCheckboxes("manpowerDiscrepancy", MANPOWER_DISCREPANCY_OPTIONS, 'manpowerDiscrepancy', isEmployeeEditable)}
-                    {renderCheckboxes("materialDiscrepancy", MATERIAL_DISCREPANCY_OPTIONS, 'materialDiscrepancy', isEmployeeEditable)}
-                    {renderCheckboxes("equipmentDiscrepancy", EQUIPMENT_DISCREPANCY_OPTIONS, 'equipmentDiscrepancy', isEmployeeEditable)}
-                    {renderCheckboxes("onSpotAction", ON_SPOT_ACTION_OPTIONS, 'onSpotAction', isEmployeeEditable)}
-                    {renderCheckboxes("actionPlan", ACTION_PLAN_OPTIONS, 'actionPlan', isEmployeeEditable)}
+            <div className="no-print space-y-6">
+                <Section title="basicIncidentInformation">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <InputField label="dateOfIncident" name="date" type="date" value={cdr.date} onChange={handleInputChange} disabled={!isEmployeeEditable} />
+                        <InputField label="timeOfIncident" name="time" type="time" value={cdr.time} onChange={handleInputChange} disabled={!isEmployeeEditable} />
+                        <SelectField label="wardLocation" name="locationId" value={cdr.locationId} onChange={handleInputChange} disabled={!isEmployeeEditable} options={locations.map(l => ({ value: l.id, label: l.name[language] }))} />
+                        <SelectField label="typeOfIncident" name="incidentType" value={cdr.incidentType} onChange={handleInputChange} disabled={!isEmployeeEditable} options={Object.values(CDRIncidentType).map(v => ({ value: v, label: t(v) }))} />
+                    </div>
+                </Section>
+                <Section title="inCharge">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <InputField label="name" name="inChargeName" value={cdr.inChargeName} onChange={handleInputChange} disabled={!isEmployeeEditable} />
+                        <InputField label="idNo" name="inChargeId" value={cdr.inChargeId} onChange={handleInputChange} disabled={!isEmployeeEditable} />
+                        <InputField label="email" name="inChargeEmail" type="email" value={cdr.inChargeEmail} onChange={handleInputChange} disabled={!isEmployeeEditable} />
+                    </div>
+                </Section>
 
-                    <Section title="staffComment">
-                        <textarea name="staffComment" value={cdr.staffComment} onChange={handleInputChange} disabled={!isEmployeeEditable} rows={5} className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600" />
-                    </Section>
-                    <Section title="attachments">
-                        <div className="flex items-center gap-4 p-4 border-2 border-dashed rounded-md dark:border-gray-600 flex-wrap">
-                            {cdr.attachments.length > 0 ? (
-                                cdr.attachments.map((attachment, index) => (
-                                    <div key={index} className="relative w-24 h-24">
-                                        <img src={attachment} alt={`Attachment ${index + 1}`} className="w-full h-full object-cover rounded-md" />
-                                        {isEmployeeEditable && (
-                                            <button onClick={() => handleRemoveAttachment(index)} className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-0.5 hover:bg-red-700">
-                                                <X size={14} />
-                                            </button>
-                                        )}
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-gray-500 dark:text-gray-400">{t('noPhotosUploaded')}</p>
-                            )}
-                            
-                            {isEmployeeEditable && (
-                                <>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        ref={fileInputRef}
-                                        onChange={handleAttachmentUpload}
-                                        className="hidden"
-                                    />
-                                    <button 
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="ms-auto px-4 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 self-center"
-                                    >
-                                        <Upload className="me-2 inline-block"/>
-                                        {t('uploadPhoto')}
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </Section>
+                {renderCheckboxes("serviceType", SERVICE_TYPES, 'serviceTypes', isEmployeeEditable)}
+                {renderCheckboxes("manpowerDiscrepancy", MANPOWER_DISCREPANCY_OPTIONS, 'manpowerDiscrepancy', isEmployeeEditable)}
+                {renderCheckboxes("materialDiscrepancy", MATERIAL_DISCREPANCY_OPTIONS, 'materialDiscrepancy', isEmployeeEditable)}
+                {renderCheckboxes("equipmentDiscrepancy", EQUIPMENT_DISCREPANCY_OPTIONS, 'equipmentDiscrepancy', isEmployeeEditable)}
+                {renderCheckboxes("onSpotAction", ON_SPOT_ACTION_OPTIONS, 'onSpotAction', isEmployeeEditable)}
+                {renderCheckboxes("actionPlan", ACTION_PLAN_OPTIONS, 'actionPlan', isEmployeeEditable)}
 
-                    {isEmployeeEditable && (
-                        <div className="flex justify-end space-x-4 mt-6">
-                            <button onClick={() => handleSave(CDRStatus.Draft)} className="flex items-center px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"><Save size={16} className="me-2" />{t('saveAsDraft')}</button>
-                            <button onClick={() => handleSave(CDRStatus.Submitted)} className="flex items-center px-4 py-2 bg-brand-teal text-white rounded-md hover:bg-brand-blue-dark"><Send size={16} className="me-2" />{t('submitToManager')}</button>
-                        </div>
-                    )}
-                    
-                    {isManagerEditable && (
-                        <Section title="managerReview">
+                <Section title="staffComment">
+                    <textarea name="staffComment" value={cdr.staffComment} onChange={handleInputChange} disabled={!isEmployeeEditable} rows={5} className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600" />
+                </Section>
+
+                {isEmployeeEditable && (
+                    <div className="flex justify-end space-x-4 mt-6">
+                        <button onClick={() => handleSave(CDRStatus.Draft)} className="flex items-center px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"><Save size={16} className="me-2" />{t('saveAsDraft')}</button>
+                        <button onClick={() => handleSave(CDRStatus.Submitted)} className="flex items-center px-4 py-2 bg-brand-teal text-white rounded-md hover:bg-brand-blue-dark"><Send size={16} className="me-2" />{t('submitToManager')}</button>
+                    </div>
+                )}
+                
+                {isManagerEditable && (
+                    <Section title="managerReview" className="bg-yellow-50 border-yellow-200">
+                        <div className="space-y-4">
                             <div className="space-y-2">
-                                <label className="font-semibold">{t('managerDecision')}</label>
-                                <div className="flex flex-wrap gap-4">
+                                <label className="font-bold text-gray-800">{t('managerDecision')}</label>
+                                <div className="flex flex-wrap gap-6 bg-white p-4 rounded-md border border-yellow-100">
                                     {Object.values(CDRManagerDecision).map(decision => (
-                                        <label key={decision} className="flex items-center space-x-2 cursor-pointer">
-                                            <input type="radio" name="managerDecision" value={decision} checked={cdr.managerDecision === decision} onChange={handleInputChange} className="w-4 h-4 text-brand-blue focus:ring-brand-blue border-gray-300" />
-                                            <span>{t(decision)}</span>
+                                        <label key={decision} className="flex items-center space-x-2 cursor-pointer group">
+                                            <input type="radio" name="managerDecision" value={decision} checked={cdr.managerDecision === decision} onChange={handleInputChange} className="w-5 h-5 text-brand-blue focus:ring-brand-blue border-gray-300" />
+                                            <span className="font-semibold group-hover:text-brand-blue transition-colors">{t(decision)}</span>
                                         </label>
                                     ))}
                                 </div>
                             </div>
                             <div>
-                                <label className="font-semibold block mb-1">{t('managerComment')}</label>
-                                <textarea name="managerComment" value={cdr.managerComment || ''} onChange={handleInputChange} rows={3} className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600" />
+                                <label className="font-bold block mb-1">{t('managerComment')}</label>
+                                <textarea name="managerComment" value={cdr.managerComment || ''} onChange={handleInputChange} rows={3} className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600" placeholder="Add official feedback here..." />
                             </div>
                             <div className="text-end">
-                                <button onClick={handleManagerApproval} className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"><ShieldCheck size={16} className="me-2" />{t('approveAndFinalize')}</button>
+                                <button onClick={handleManagerApproval} className="flex items-center px-6 py-2 bg-green-600 text-white font-bold rounded-md hover:bg-green-700 shadow-md"><ShieldCheck size={18} className="me-2" />{t('approveAndFinalize')}</button>
                             </div>
-                        </Section>
-                    )}
-                    </>
-                ) : (
-                    <ReadOnlyView cdr={cdr} />
+                        </div>
+                    </Section>
                 )}
             </div>
-            
-            {!isNew && (
-                <div className="hidden print-block">
-                    <ReadOnlyView cdr={cdr} />
-                </div>
-            )}
+
+            {/* نسخة الطباعة - تظهر دائماً للمقاول والمدير */}
+            <div className="hidden print-block">
+                <ReadOnlyPrintView cdr={cdr} />
+            </div>
         </div>
     );
 };
 
-const ReadOnlyView = ({ cdr }: { cdr: CDR }) => {
+const ReadOnlyPrintView = ({ cdr }: { cdr: CDR }) => {
     const { t, language } = useI18n();
     const { getLocationById } = useContext(AppContext);
     const location = getLocationById(cdr.locationId);
 
-
-    const PrintHeader = () => (
-        <div className="hidden print-flex justify-between items-center mb-8">
-            <div className="flex items-center">
-                <Hospital size={32} className="text-brand-blue" />
-                <h1 className="text-2xl font-bold mx-2">CDR System</h1>
-            </div>
-            <div>
-                <h2 className="text-2xl font-bold">Environmental Services Discrepancy Report</h2>
-                <p className="text-sm text-right">{cdr.referenceNumber}</p>
-            </div>
-        </div>
-    );
-
-    const ReadOnlySection: React.FC<{title: string, children: React.ReactNode}> = ({title, children}) => (
-        <div className="cdr-print-section">
-            <h4>{t(title)}</h4>
-            {children}
-        </div>
-    );
-
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm cdr-print-view">
-            <PrintHeader />
-            <div className="cdr-print-grid">
-                <ReadOnlySection title="basicIncidentInformation">
-                    <p><strong>{t('date')}:</strong> {new Date(cdr.date).toLocaleDateString()}</p>
-                    <p><strong>{t('timeOfIncident')}:</strong> {cdr.time}</p>
-                    <p><strong>{t('location')}:</strong> {location?.name[language]}</p>
-                    <p><strong>{t('typeOfIncident')}:</strong> {t(cdr.incidentType)}</p>
-                </ReadOnlySection>
-                 <ReadOnlySection title="inCharge">
-                    <p><strong>{t('name')}:</strong> {cdr.inChargeName}</p>
-                    <p><strong>{t('idNo')}:</strong> {cdr.inChargeId}</p>
-                </ReadOnlySection>
-            </div>
-            
-            <ReadOnlySection title="discrepancyCategories">
-                <ul>
-                    {[...cdr.serviceTypes, ...cdr.manpowerDiscrepancy, ...cdr.materialDiscrepancy, ...cdr.equipmentDiscrepancy].map(item => <li key={item}>- {t(item)}</li>)}
-                </ul>
-            </ReadOnlySection>
-            <ReadOnlySection title="staffComment"><p>{cdr.staffComment}</p></ReadOnlySection>
-            
-            <div className="cdr-print-grid">
-                <ReadOnlySection title="onSpotAction"><ul>{cdr.onSpotAction.map(item => <li key={item}>- {item}</li>)}</ul></ReadOnlySection>
-                <ReadOnlySection title="actionPlan"><ul>{cdr.actionPlan.map(item => <li key={item}>- {item}</li>)}</ul></ReadOnlySection>
-            </div>
-            
-             <div className="mt-4 p-4 border-t dark:border-gray-700">
-                <div className="flex justify-around">
-                    <div className="text-center">
-                        <p className="font-semibold">{t('employeeSignature')}</p>
-                        <p className="mt-4 border-t dark:border-gray-600 pt-1">{cdr.employeeSignature}</p>
-                    </div>
-                     <div className="text-center">
-                        <p className="font-semibold">{t('managerSignature')}</p>
-                        <p className="mt-4 border-t dark:border-gray-600 pt-1">{cdr.managerSignature || '---'}</p>
-                    </div>
+        <div className="bg-white p-6 rounded-lg cdr-print-view text-black">
+            <div className="flex justify-between items-center mb-8 border-b-4 border-brand-blue pb-4">
+                <div className="flex items-center">
+                    <Hospital size={40} className="text-brand-blue" />
+                    <h1 className="text-2xl font-bold mx-2">InspectionSys - CDR</h1>
+                </div>
+                <div className="text-right">
+                    <h2 className="text-xl font-bold uppercase">Environmental Discrepancy Report</h2>
+                    <p className="text-sm font-mono">{cdr.referenceNumber}</p>
                 </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="border p-3 rounded">
+                    <p className="text-xs uppercase text-gray-500 font-bold mb-1">{t('basicIncidentInformation')}</p>
+                    <p><strong>{t('date')}:</strong> {new Date(cdr.date).toLocaleDateString()}</p>
+                    <p><strong>{t('location')}:</strong> {location?.name[language]}</p>
+                    <p><strong>{t('typeOfIncident')}:</strong> {t(cdr.incidentType)}</p>
+                </div>
+                <div className="border p-3 rounded">
+                    <p className="text-xs uppercase text-gray-500 font-bold mb-1">{t('inCharge')}</p>
+                    <p><strong>{t('name')}:</strong> {cdr.inChargeName}</p>
+                    <p><strong>{t('idNo')}:</strong> {cdr.inChargeId}</p>
+                </div>
+            </div>
+
+            <div className="border p-3 rounded mb-6">
+                <p className="text-xs uppercase text-gray-500 font-bold mb-2">{t('discrepancyCategories')}</p>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                    {[...cdr.serviceTypes, ...cdr.manpowerDiscrepancy, ...cdr.materialDiscrepancy, ...cdr.equipmentDiscrepancy].map(item => (
+                        <div key={item} className="flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
+                            {t(item)}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="border p-3 rounded mb-6 min-h-[100px]">
+                <p className="text-xs uppercase text-gray-500 font-bold mb-1">{t('staffComment')}</p>
+                <p className="text-sm italic">{cdr.staffComment}</p>
+            </div>
+
             {cdr.status === CDRStatus.Approved && (
-                <Card className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500">
-                    <h3 className="font-bold text-lg text-blue-800 dark:text-blue-300 flex items-center"><CheckCircle size={20} className="me-2"/>{t('managerDecision')}</h3>
-                    <p className="text-2xl font-bold mt-2">{t(cdr.managerDecision!)}</p>
-                    {cdr.managerComment && <p className="mt-2 text-gray-700 dark:text-gray-300">"{cdr.managerComment}"</p>}
-                </Card>
+                <div className={`border-2 p-4 rounded mb-8 ${cdr.managerDecision === CDRManagerDecision.Penalty ? 'border-red-300 bg-red-50' : 'border-blue-300 bg-blue-50'}`}>
+                    <h3 className="font-bold text-lg mb-1">{t('managerDecision')}: {t(cdr.managerDecision!)}</h3>
+                    {cdr.managerComment && <p className="text-sm italic">"{cdr.managerComment}"</p>}
+                </div>
             )}
+
+             <div className="mt-10 grid grid-cols-2 gap-20">
+                <div className="text-center">
+                    <div className="h-16 border-b border-gray-400 mb-2 flex items-end justify-center pb-2">
+                        <span className="font-mono">{cdr.employeeSignature}</span>
+                    </div>
+                    <p className="font-bold text-xs uppercase">{t('employeeSignature')}</p>
+                </div>
+                 <div className="text-center">
+                    <div className="h-16 border-b border-gray-400 mb-2 flex items-end justify-center pb-2">
+                        <span className="font-mono">{cdr.managerSignature || '---'}</span>
+                    </div>
+                    <p className="font-bold text-xs uppercase">{t('managerSignature')}</p>
+                </div>
+            </div>
         </div>
     );
 };
@@ -426,7 +392,7 @@ const InputField: React.FC<{label: string, name: string, value: string, onChange
     const { t } = useI18n();
     return (
     <div>
-        <label className="block text-sm font-medium mb-1">{t(label)}</label>
+        <label className="block text-sm font-bold mb-1">{t(label)}</label>
         <input type={type} name={name} value={value} onChange={onChange} disabled={disabled} className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-800" />
     </div>
 );
@@ -436,13 +402,12 @@ const SelectField: React.FC<{label: string, name: string, value: string, onChang
     const {t} = useI18n();
     return(
     <div>
-        <label className="block text-sm font-medium mb-1">{t(label)}</label>
+        <label className="block text-sm font-bold mb-1">{t(label)}</label>
         <select name={name} value={value} onChange={onChange} disabled={disabled} className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-800">
-             <option value="">-- Select --</option>
+             <option value="">-- {t('pleaseSelect')} --</option>
             {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
         </select>
     </div>
 )};
-
 
 export default CDRDetail;

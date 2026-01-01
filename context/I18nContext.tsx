@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { Translations } from '../types';
 
@@ -15,7 +16,6 @@ export const I18nContext = createContext<I18nContextType>({} as I18nContextType)
 
 const translations: Translations = {
   en: {
-    // ... existing keys ...
     login: 'Login',
     loginError: 'Invalid credentials',
     username: 'Username',
@@ -351,8 +351,6 @@ const translations: Translations = {
     selected: 'Selected',
     confirmSubmitReport: 'Are you sure you want to submit this report? This action cannot be undone.',
     reportSubmittedSuccess: 'Report submitted successfully!',
-    
-    // NEW CONTRACTOR KEYS
     contractorDashboard: 'Contractor Dashboard',
     rectificationRequired: 'Rectification Required',
     rectificationCompleted: 'Rectification Completed',
@@ -365,12 +363,10 @@ const translations: Translations = {
     fixNow: 'Fix Now',
     acceptRectification: 'Accept Fix & Close',
     rejectRectification: 'Reject & Return to Contractor',
-    
-    // Statuses
     RectificationRequired: 'Rectification Required',
     RectificationCompleted: 'Rectification Completed',
-
-    // HIGH RISK ITEMS
+    approvedPenalties: 'Approved Penalties',
+    adminNotices: 'Official Admin Notices',
     hr_item_1: 'Floors - Cleanliness & Condition',
     hr_item_2: 'Walls - Cleanliness & Paint Condition',
     hr_item_3: 'Medical Equipment - Dust Free & Clean',
@@ -386,8 +382,6 @@ const translations: Translations = {
     hr_item_13: 'Paper Towels - Available',
     hr_item_14: 'Odor - Neutral/Pleasant',
     hr_item_15: 'Safety Signs - Posted & Visible',
-
-    // MEDIUM RISK ITEMS
     mr_item_1: 'Floors - Cleanliness',
     mr_item_2: 'Walls - Cleanliness',
     mr_item_3: 'Furniture - Dust Free',
@@ -404,8 +398,6 @@ const translations: Translations = {
     mr_item_14: 'Odor - Neutral',
     mr_item_15: 'Safety Signs - Posted',
     mr_item_16: 'Walkways - Clear of Obstruction',
-
-    // LOW RISK ITEMS
     lr_item_1: 'Floors - Cleanliness',
     lr_item_2: 'Walls - Cleanliness',
     lr_item_3: 'Furniture - Dust Free',
@@ -421,8 +413,6 @@ const translations: Translations = {
     lr_item_13: 'Paper Towels - Available',
     lr_item_14: 'Odor - Neutral',
     lr_item_15: 'Parking - Clean & Tidy',
-    
-    // --- Penalty Translations ---
     penalty_a1: 'Failure to clean equipment daily or repair cleaning equipment properly and not following safety procedures.',
     penalty_a2: 'Delay in submitting required correspondence, reports, and documents.',
     penalty_a3: 'Failure to prepare and submit monthly employee task/area schedules on time.',
@@ -460,7 +450,6 @@ const translations: Translations = {
     penalty_d9: 'Issuing cleaning supplies or tools for non-work purposes.',
   },
   ar: {
-    // ... existing keys ...
     login: 'تسجيل الدخول',
     loginError: 'خطأ في تسجيل الدخول',
     username: 'اسم المستخدم',
@@ -549,7 +538,7 @@ const translations: Translations = {
     totalPenaltyViolations: 'إجمالي المخالفات',
     totalPenaltyAmountDue: 'إجمالي المبلغ المستحق',
     viewAll: 'عرض الكل',
-    myInspectionsList: 'قائمة تفتيشاتي',
+    myInspectionsList: 'تفتيشاتي',
     date: 'التاريخ',
     noReportsFound: 'لا توجد تقارير',
     supervisorFeedback: 'ملاحظات المشرف',
@@ -567,7 +556,7 @@ const translations: Translations = {
     invoiceDetails: 'تفاصيل الفاتورة',
     approvedBy: 'تم الاعتماد من قبل',
     approvalDate: 'تاريخ الاعتماد',
-    globalPenaltyStatementsList: 'قائمة العقوبات الشاملة',
+    globalPenaltyStatementsList: 'بيانات العقوبات الشاملة',
     createStatement: 'إنشاء بيان',
     generateStatement: 'توليد البيان',
     statementPeriod: 'فترة البيان',
@@ -577,7 +566,7 @@ const translations: Translations = {
     generalComments: 'تعليقات عامة',
     refreshData: 'تحديث البيانات',
     approveStatement: 'اعتماد البيان',
-    approve: 'موافقة',
+    approve: 'موافق',
     reject: 'رفض',
     confirmRefresh: 'هل أنت متأكد من تحديث البيانات؟ ستفقد التغييرات غير المحفوظة.',
     confirmApprove: 'هل أنت متأكد من اعتماد هذا البيان؟',
@@ -586,10 +575,8 @@ const translations: Translations = {
     amount: 'المبلغ',
     quantity: 'الكمية',
     selectViolation: 'اختر المخالفة',
-
-    // NEW CONTRACTOR KEYS
-    contractorDashboard: 'لوحة قيادة الشركة',
-    rectificationRequired: 'مطلوب تصحيح',
+    contractorDashboard: 'لوحة تحكم الشركة',
+    rectificationRequired: 'طلبات التصحيح (الميدانية)',
     rectificationCompleted: 'تم التصحيح',
     requestRectification: 'طلب تصحيح من الشركة',
     submitRectification: 'إرسال التصحيح',
@@ -600,12 +587,10 @@ const translations: Translations = {
     fixNow: 'بدء التصحيح',
     acceptRectification: 'قبول التصحيح وإغلاق',
     rejectRectification: 'رفض وإعادة للشركة',
-
-    // Statuses
     RectificationRequired: 'مطلوب تصحيح',
     RectificationCompleted: 'تم التصحيح (بانتظار المفتش)',
-
-    // HIGH RISK ITEMS - ARABIC
+    approvedPenalties: 'الغرامات المالية المعتمدة',
+    adminNotices: 'التنبيهات والملاحظات الإدارية',
     hr_item_1: 'الأرضيات - النظافة والحالة',
     hr_item_2: 'الجدران - النظافة وحالة الطلاء',
     hr_item_3: 'المعدات الطبية - خالية من الغبار ونظيفة',
@@ -621,8 +606,6 @@ const translations: Translations = {
     hr_item_13: 'المناشف الورقية - متوفرة',
     hr_item_14: 'الرائحة - محايدة/مقبولة',
     hr_item_15: 'علامات السلامة - منشورة وواضحة',
-
-    // MEDIUM RISK ITEMS - ARABIC
     mr_item_1: 'الأرضيات - النظافة',
     mr_item_2: 'الجدران - النظافة',
     mr_item_3: 'الأثاث - خالي من الغبار',
@@ -639,8 +622,6 @@ const translations: Translations = {
     mr_item_14: 'الرائحة - محايدة',
     mr_item_15: 'علامات السلامة - منشورة',
     mr_item_16: 'الممرات - خالية من العوائق',
-
-    // LOW RISK ITEMS - ARABIC
     lr_item_1: 'الأرضيات - النظافة',
     lr_item_2: 'الجدران - النظافة',
     lr_item_3: 'الأثاث - خالي من الغبار',
@@ -656,8 +637,6 @@ const translations: Translations = {
     lr_item_13: 'المناشف الورقية - متوفرة',
     lr_item_14: 'الرائحة - محايدة',
     lr_item_15: 'مواقف السيارات - نظيفة ومرتبة',
-
-    // PENALTY TRANSLATIONS - ARABIC
     penalty_a1: 'عدم تنظيف المعدات يوميًا أو إصلاح معدات التنظيف بشكل صحيح وعدم اتباع إجراءات السلامة.',
     penalty_a2: 'التأخير في تقديم المراسلات والتقارير والمستندات المطلوبة.',
     penalty_a3: 'عدم إعداد وتقديم جداول مهام/مناطق الموظفين الشهرية في الوقت المحدد.',
@@ -715,7 +694,6 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (value && value[key]) {
       return value[key];
     }
-    // Fallback: return key itself if translation missing
     return key;
   }, [language]);
 
